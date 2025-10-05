@@ -1,14 +1,21 @@
-# E-Commerce API Documentation
+# API Documentation - E-Commerce System
 
-This document describes all the API endpoints available in the system, including authentication, products, and checkout functionality.
+## Overview
+Complete e-commerce API with authentication, product management, checkout, payment processing (Xendit integration), and order tracking.
 
 ## Base URL
 ```
-http://your-domain.com/api
+http://localhost:8000/api
 ```
 
 ## Authentication
-This API uses Bearer token authentication with Laravel Sanctum. Include the token in the Authorization header:
+The API uses Laravel Sanctum for token-based authentication. Include the bearer token in the Authorization header for protected endpoints.
+
+```
+Authorization: Bearer {your-token}
+```
+
+For payment-related endpoints, also include API key:
 ```
 Authorization: Bearer {your-token}
 ```
@@ -797,6 +804,177 @@ Authorization: Bearer {your-token}
 ## Product Status
 - `active`: Product available for purchase
 - `inactive`: Product not available
+
+---
+
+## 4. Payment Endpoints
+**Note:** All payment endpoints require both authentication token and API key.
+
+### POST /payments
+Create a new payment for an order.
+
+**Headers:**
+```
+Authorization: Bearer {token}
+X-API-Key: {api-key}
+```
+
+**Request Body:**
+```json
+{
+    "order_id": 1,
+    "payment_method": "BANK_TRANSFER",
+    "description": "Payment for order ORD-20240101-001"
+}
+```
+
+**Response (201):**
+```json
+{
+    "status": "success",
+    "message": "Payment created successfully",
+    "data": {
+        "id": 1,
+        "external_id": "payment_1704067200_1",
+        "order_id": 1,
+        "amount": 30500000,
+        "currency": "IDR",
+        "status": "pending",
+        "payment_method": "BANK_TRANSFER",
+        "xendit_invoice_id": "64f5a6b4c8a0d3001234567890",
+        "xendit_data": {
+            "invoice_url": "https://checkout.xendit.co/web/64f5a6b4c8a0d3001234567890",
+            "expiry_date": "2024-01-02T00:00:00.000Z"
+        },
+        "created_at": "2024-01-01T00:00:00.000000Z"
+    }
+}
+```
+
+### GET /payments
+Get user's payments with filtering.
+
+**Query Parameters:**
+- `status` (string): Filter by payment status
+- `order_id` (number): Filter by order ID
+- `payment_method` (string): Filter by payment method
+- `per_page` (number): Items per page
+
+### GET /payments/{id}
+Get payment details.
+
+### POST /payments/{id}/cancel
+Cancel a payment.
+
+---
+
+## 5. Order History Endpoints
+**Note:** Requires both authentication token and API key.
+
+### GET /order-history
+Get comprehensive order history with filtering.
+
+**Query Parameters:**
+- `status` (string): Filter by order status
+- `payment_status` (string): Filter by payment status
+- `date_from` (date): Filter orders from date (Y-m-d)
+- `date_to` (date): Filter orders to date (Y-m-d)
+- `min_amount` (number): Minimum order amount
+- `max_amount` (number): Maximum order amount
+- `per_page` (number): Items per page
+
+**Response (200):**
+```json
+{
+    "status": "success",
+    "data": {
+        "orders": {
+            "data": [
+                {
+                    "id": 1,
+                    "order_number": "ORD-20240101-001",
+                    "status": "processing",
+                    "total_amount": 30500000,
+                    "created_at": "2024-01-01T00:00:00.000000Z",
+                    "payment": {
+                        "status": "paid",
+                        "payment_method": "BANK_TRANSFER",
+                        "paid_at": "2024-01-01T01:00:00.000000Z"
+                    }
+                }
+            ]
+        },
+        "summary": {
+            "total_orders": 5,
+            "total_spent": 75000000,
+            "average_order_value": 15000000
+        }
+    }
+}
+```
+
+### GET /order-history/{order_id}/track
+Track specific order with detailed timeline.
+
+---
+
+## 6. Xendit Webhook Endpoints
+**Note:** These endpoints are public and used by Xendit to send payment notifications.
+
+### POST /webhooks/xendit/invoice
+Handle Xendit invoice callbacks.
+
+**Request Body (from Xendit):**
+```json
+{
+    "id": "64f5a6b4c8a0d3001234567890",
+    "external_id": "payment_1704067200_1",
+    "status": "PAID",
+    "amount": 30500000,
+    "paid_amount": 30500000,
+    "payment_method": "BANK_TRANSFER",
+    "payment_channel": "BCA",
+    "payment_id": "payment_abc123",
+    "paid_at": "2024-01-01T01:00:00.000Z"
+}
+```
+
+**Response (200):**
+```json
+{
+    "status": "success",
+    "message": "Webhook processed successfully"
+}
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+Add these to your `.env` file:
+
+```env
+# Xendit Configuration
+XENDIT_SECRET_KEY=xnd_development_your_secret_key_here
+XENDIT_CALLBACK_TOKEN=your_callback_token_here
+
+# API Security
+API_KEY=your_secure_api_key_here
+```
+
+### Webhook Configuration
+Configure Xendit webhooks in your Xendit dashboard:
+
+**Invoice Callback URL:**
+```
+https://yourdomain.com/api/webhooks/xendit/invoice
+```
+
+**Supported Events:**
+- Invoice paid
+- Invoice expired
+- Invoice failed
 
 ---
 

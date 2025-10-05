@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | API Key
+    |--------------------------------------------------------------------------
+    |
+    | API key for securing protected endpoints. This key should be included
+    | in the X-API-Key header for protected API endpoints.
+    |
+    */
+
+    'api_key' => env('API_KEY'),
+
 ];

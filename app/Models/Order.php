@@ -85,10 +85,45 @@ class Order extends Model
     }
 
     /**
+     * Get the payments for the order
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Get the latest payment
+     */
+    public function latestPayment()
+    {
+        return $this->hasOne(Payment::class)->latestOfMany();
+    }
+
+    /**
      * Check if order can be cancelled
      */
     public function canBeCancelled(): bool
     {
         return in_array($this->status, ['pending', 'processing']);
+    }
+
+    /**
+     * Check if order has successful payment
+     */
+    public function hasSuccessfulPayment(): bool
+    {
+        return $this->payments()->where('status', 'paid')->exists();
+    }
+
+    /**
+     * Mark order as paid and update status
+     */
+    public function markAsPaid(): bool
+    {
+        return $this->update([
+            'payment_status' => 'paid',
+            'status' => 'processing',
+        ]);
     }
 }
